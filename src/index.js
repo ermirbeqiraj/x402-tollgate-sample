@@ -71,7 +71,7 @@ async function handle(request, env) {
 
     const body = await requirementsRes.text();
     return new Response(body, {
-      status: 402,
+      status: requirementsRes.status,
       headers: { "Content-Type": "application/json" },
     });
   }
@@ -103,9 +103,19 @@ async function handle(request, env) {
     }
   );
 
+  const verifyText = await verifyRes.text();
   if (!verifyRes.ok) {
-    const body = await verifyRes.text();
-    return new Response(body, {
+    return new Response(verifyText, {
+      status: verifyRes.status,
+      headers: { "Content-Type": "application/json" },
+    });
+  }
+  const verifyBody = (() => { try { return JSON.parse(verifyText); } catch { return null; } })();
+  if (verifyBody?.isValid !== true) {
+    return new Response(JSON.stringify({
+      error: "payment_verification_failed",
+      reason: verifyBody?.invalidReason ?? "unknown",
+    }), {
       status: 402,
       headers: { "Content-Type": "application/json" },
     });
@@ -125,9 +135,19 @@ async function handle(request, env) {
     }
   );
 
+  const settleText = await settleRes.text();
   if (!settleRes.ok) {
-    const body = await settleRes.text();
-    return new Response(body, {
+    return new Response(settleText, {
+      status: settleRes.status,
+      headers: { "Content-Type": "application/json" },
+    });
+  }
+  const settleBody = (() => { try { return JSON.parse(settleText); } catch { return null; } })();
+  if (settleBody?.isValid !== true) {
+    return new Response(JSON.stringify({
+      error: "payment_settlement_failed",
+      reason: settleBody?.invalidReason ?? "unknown",
+    }), {
       status: 402,
       headers: { "Content-Type": "application/json" },
     });
