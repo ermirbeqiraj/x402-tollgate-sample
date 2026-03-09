@@ -45,14 +45,19 @@ async function handle(request, env) {
   const url = new URL(request.url);
   const route = GATED_ROUTES[url.pathname];
 
+  console.log(`[request] ${request.method} ${url.pathname}`);
+
   if (!route) {
+    console.log(`[route] no match for ${url.pathname} — returning 404`);
     return new Response("Not found", { status: 404 });
   }
 
   const paymentHeader = request.headers.get("x-payment");
+  console.log(`[payment-header] present=${!!paymentHeader}`);
 
   // No payment header — fetch requirements from Prism and return 402
   if (!paymentHeader) {
+    console.log(`[requirements] fetching from Prism for route=${url.pathname} price=${route.price}`);
     const requirementsRes = await fetch(
       `${PRISM_GATEWAY}/api/v2/payment/requirements`,
       {
@@ -70,6 +75,7 @@ async function handle(request, env) {
     );
 
     const body = await requirementsRes.text();
+    console.log(`[requirements] Prism responded status=${requirementsRes.status} body=${body}`);
     return new Response(body, {
       status: 402,
       headers: { "Content-Type": "application/json" },
@@ -80,7 +86,9 @@ async function handle(request, env) {
   let paymentPayload;
   try {
     paymentPayload = JSON.parse(atob(paymentHeader));
-  } catch {
+    console.log(`[decode] payment header decoded OK`);
+  } catch (e) {
+    console.log(`[decode] failed to decode payment header: ${e.message} raw=${paymentHeader}`);
     return new Response(
       JSON.stringify({ error: "Invalid X-Payment header encoding" }),
       { status: 400, headers: { "Content-Type": "application/json" } }
@@ -88,6 +96,7 @@ async function handle(request, env) {
   }
 
   const paymentRequirements = paymentPayload?.accepted ?? null;
+  console.log(`[verify] sending to Prism paymentRequirements=${JSON.stringify(paymentRequirements)}`);
 
   // Verify payment with Prism
   const verifyRes = await fetch(
@@ -104,7 +113,9 @@ async function handle(request, env) {
   );
 
   const verifyText = await verifyRes.text();
+  console.log(`[verify] Prism responded status=${verifyRes.status} body=${verifyText}`);
   if (!verifyRes.ok) {
+    console.log(`[verify] non-OK status from Prism, returning error to caller`);
     return new Response(verifyText, {
       status: verifyRes.status,
       headers: { "Content-Type": "application/json" },
@@ -112,6 +123,7 @@ async function handle(request, env) {
   }
   const verifyBody = (() => { try { return JSON.parse(verifyText); } catch { return null; } })();
   if (verifyBody?.isValid !== true) {
+    console.log(`[verify] isValid=false reason=${verifyBody?.invalidReason}`);
     return new Response(JSON.stringify({
       error: "payment_verification_failed",
       reason: verifyBody?.invalidReason ?? "unknown",
@@ -120,8 +132,10 @@ async function handle(request, env) {
       headers: { "Content-Type": "application/json" },
     });
   }
+  console.log(`[verify] payment valid — proceeding to settle`);
 
   // Settle payment with Prism
+  console.log(`[settle] sending to Prism`);
   const settleRes = await fetch(
     `${PRISM_GATEWAY}/api/v2/payment/settle`,
     {
@@ -136,22 +150,26 @@ async function handle(request, env) {
   );
 
   const settleText = await settleRes.text();
+  console.log(`[settle] Prism responded status=${settleRes.status} body=${settleText}`);
   if (!settleRes.ok) {
+    console.log(`[settle] non-OK status from Prism, returning error to caller`);
     return new Response(settleText, {
       status: settleRes.status,
       headers: { "Content-Type": "application/json" },
     });
   }
   const settleBody = (() => { try { return JSON.parse(settleText); } catch { return null; } })();
-  if (settleBody?.isValid !== true) {
+  if (settleBody?.success !== true) {
+    console.log(`[settle] success=false reason=${settleBody?.errorReason}`);
     return new Response(JSON.stringify({
       error: "payment_settlement_failed",
-      reason: settleBody?.invalidReason ?? "unknown",
+      reason: settleBody?.errorReason ?? "unknown",
     }), {
       status: 402,
       headers: { "Content-Type": "application/json" },
     });
   }
+  console.log(`[settle] payment settled — serving content for route=${url.pathname}`);
 
   // Payment verified + settled — return content directly
   return new Response(route.content, {
