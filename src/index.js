@@ -71,7 +71,7 @@ async function handle(request, env) {
 
     const body = await requirementsRes.text();
     return new Response(body, {
-      status: requirementsRes.status,
+      status: 402,
       headers: { "Content-Type": "application/json" },
     });
   }
