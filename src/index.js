@@ -52,7 +52,7 @@ async function handle(request, env) {
     return new Response("Not found", { status: 404 });
   }
 
-  const paymentHeader = request.headers.get("x-payment");
+  const paymentHeader = request.headers.get("PAYMENT-SIGNATURE");
   console.log(`[payment-header] present=${!!paymentHeader}`);
 
   // No payment header — fetch requirements from Prism and return 402
@@ -76,9 +76,12 @@ async function handle(request, env) {
 
     const body = await requirementsRes.text();
     console.log(`[requirements] Prism responded status=${requirementsRes.status} body=${body}`);
-    return new Response(body, {
+    return new Response("Look at the headers", {
       status: 402,
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "text/plain",
+        "PAYMENT-REQUIRED": btoa(body),
+      },
     });
   }
 
@@ -155,18 +158,21 @@ async function handle(request, env) {
     console.log(`[settle] non-OK status from Prism, returning error to caller`);
     return new Response(settleText, {
       status: settleRes.status,
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        "PAYMENT-RESPONSE": btoa(settleText),
+      },
     });
   }
   const settleBody = (() => { try { return JSON.parse(settleText); } catch { return null; } })();
   if (settleBody?.success !== true) {
     console.log(`[settle] success=false reason=${settleBody?.errorReason}`);
-    return new Response(JSON.stringify({
-      error: "payment_settlement_failed",
-      reason: settleBody?.errorReason ?? "unknown",
-    }), {
+    return new Response(settleText, {
       status: 402,
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        "PAYMENT-RESPONSE": btoa(settleText),
+      },
     });
   }
   console.log(`[settle] payment settled — serving content for route=${url.pathname}`);
@@ -177,6 +183,7 @@ async function handle(request, env) {
     headers: {
       "Content-Type": route.contentType,
       "Cache-Control": "no-store",
+      "PAYMENT-RESPONSE": btoa(settleText),
     },
   });
 }
