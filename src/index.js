@@ -6,6 +6,11 @@
 // =============================================================================
 
 const PRISM_GATEWAY = "https://prism-gw.fd.xyz";
+const PRISM_HEADERS = {
+  "Content-Type": "application/json",
+  "Accept": "application/json",
+  "User-Agent": "x402-worker/1.0",
+};
 
 const GATED_ROUTES = {
   "/premium/jokes/": {
@@ -62,11 +67,7 @@ async function handle(request, env) {
       `${PRISM_GATEWAY}/api/v2/payment/requirements`,
       {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Accept": "application/json",
-          "x-api-key": env.PRISM_API_KEY,
-        },
+        headers: { ...PRISM_HEADERS, "x-api-key": env.PRISM_API_KEY },
         body: JSON.stringify({
           resourceUrl: request.url,
           requestedAmount: route.price,
@@ -106,11 +107,7 @@ async function handle(request, env) {
     `${PRISM_GATEWAY}/api/v2/payment/verify`,
     {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Accept": "application/json",
-        "x-api-key": env.PRISM_API_KEY,
-      },
+      headers: { ...PRISM_HEADERS, "x-api-key": env.PRISM_API_KEY },
       body: JSON.stringify({ paymentPayload, paymentRequirements }),
     }
   );
@@ -143,11 +140,7 @@ async function handle(request, env) {
     `${PRISM_GATEWAY}/api/v2/payment/settle`,
     {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Accept": "application/json",
-        "x-api-key": env.PRISM_API_KEY,
-      },
+      headers: { ...PRISM_HEADERS, "x-api-key": env.PRISM_API_KEY },
       body: JSON.stringify({ paymentPayload, paymentRequirements }),
     }
   );
