@@ -77,10 +77,10 @@ async function handle(request, env) {
 
     const body = await requirementsRes.text();
     console.log(`[requirements] Prism responded status=${requirementsRes.status} body=${body}`);
-    return new Response("Look at the headers", {
+    return new Response(body, {
       status: 402,
       headers: {
-        "Content-Type": "text/plain",
+        "Content-Type": "application/json",
         "PAYMENT-REQUIRED": btoa(body),
       },
     });
