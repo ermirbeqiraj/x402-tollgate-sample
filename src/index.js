@@ -5,7 +5,7 @@
 // Routes not listed return 404.
 // =============================================================================
 
-const PRISM_GATEWAY = "https://prism-gw.fd.xyz";
+const PRISM_GATEWAY = "https://prism-gw.test.1stdigital.tech";
 const PRISM_HEADERS = {
   "Content-Type": "application/json",
   "Accept": "application/json",
