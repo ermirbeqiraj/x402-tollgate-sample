@@ -57,7 +57,7 @@ async function handle(request, env) {
     return new Response("Not found", { status: 404 });
   }
 
-  const paymentHeader = request.headers.get("PAYMENT-SIGNATURE");
+  const paymentHeader = request.headers.get("X-Payment");
   console.log(`[payment-header] present=${!!paymentHeader}`);
 
   // No payment header — fetch requirements from Prism and return 402
@@ -81,7 +81,7 @@ async function handle(request, env) {
       status: 402,
       headers: {
         "Content-Type": "application/json",
-        "PAYMENT-REQUIRED": btoa(body),
+        "X-Payment-Required": btoa(body),
       },
     });
   }
@@ -153,7 +153,7 @@ async function handle(request, env) {
       status: settleRes.status,
       headers: {
         "Content-Type": "application/json",
-        "PAYMENT-RESPONSE": btoa(settleText),
+        "X-Payment-Receipt": btoa(settleText),
       },
     });
   }
@@ -164,7 +164,7 @@ async function handle(request, env) {
       status: 402,
       headers: {
         "Content-Type": "application/json",
-        "PAYMENT-RESPONSE": btoa(settleText),
+        "X-Payment-Receipt": btoa(settleText),
       },
     });
   }
@@ -176,7 +176,7 @@ async function handle(request, env) {
     headers: {
       "Content-Type": route.contentType,
       "Cache-Control": "no-store",
-      "PAYMENT-RESPONSE": btoa(settleText),
+      "X-Payment-Receipt": btoa(settleText),
     },
   });
 }
