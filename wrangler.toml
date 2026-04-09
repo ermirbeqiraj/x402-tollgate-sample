@@ -1,3 +1,4 @@
 name = "x402-proxy"
+account_id = "26e9c384eae1f77fe827cfeb4bfb83be"
 main = "src/index.js"
 compatibility_date = "2024-01-01"
